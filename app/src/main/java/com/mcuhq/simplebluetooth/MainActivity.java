@@ -8,18 +8,22 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.graphics.Typeface;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+//import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CheckBox;
+//import android.widget.CheckBox;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -45,7 +49,25 @@ public class MainActivity extends AppCompatActivity {
     private Set<BluetoothDevice> mPairedDevices;
     private ArrayAdapter<String> mBTArrayAdapter;
     private ListView mDevicesListView;
-    private CheckBox mLED1;
+  //  private CheckBox mLED1;
+
+    private Typeface typeface;
+    private TextView textCalor;
+    private TextView textFrio;
+    private TextView textButton;
+    private TextView textButton2;
+    private TextView textTemp;
+    private TextView textHum;
+    private TextView senseHum;
+    private TextView senseTemp;
+
+    private TextView textSenseTemp;
+    private LinearLayout actuadorFrio;
+    private LinearLayout actuadorCalor;
+
+    private Button ButtonFrio;
+    private Button ButtonCalor;
+
 
     private final String TAG = MainActivity.class.getSimpleName();
     private Handler mHandler; // Our main handler that will receive callback notifications
@@ -65,6 +87,32 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        // Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        //setSupportActionBar(toolbar);
+
+        typeface = Typeface.createFromAsset(getAssets(), "fonts/BrodoThinGrunge.ttf");
+        textCalor = (TextView) findViewById(R.id.textCalor);
+        textFrio = (TextView) findViewById(R.id.textFrio);
+        textButton = (TextView) findViewById(R.id.textButton);
+        ButtonFrio = (Button)findViewById(R.id.textButton);
+        ButtonCalor = (Button)findViewById(R.id.textButton2);
+        textButton2 = (TextView) findViewById(R.id.textButton2);
+        textTemp = (TextView) findViewById(R.id.textTemp);
+        textHum = (TextView) findViewById(R.id.textHum);
+
+        senseHum = (TextView) findViewById(R.id.sensedeverishum);
+        senseTemp = (TextView) findViewById(R.id.sensedeveristemp);
+
+        textSenseTemp = (TextView) findViewById(R.id.sensetemp);
+        actuadorFrio = (LinearLayout) findViewById(R.id.actuadorfrio);
+        actuadorCalor = (LinearLayout) findViewById(R.id.actuadorcalor);
+
+        textCalor.setTypeface(typeface);
+        textFrio.setTypeface(typeface);
+        textButton.setTypeface(typeface);
+        textButton2.setTypeface(typeface);
+        textTemp.setTypeface(typeface);
+        textHum.setTypeface(typeface);
 
         mBluetoothStatus = (TextView)findViewById(R.id.bluetoothStatus);
         mReadBuffer = (TextView) findViewById(R.id.readBuffer);
@@ -72,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
         mOffBtn = (Button)findViewById(R.id.off);
         mDiscoverBtn = (Button)findViewById(R.id.discover);
         mListPairedDevicesBtn = (Button)findViewById(R.id.PairedBtn);
-        mLED1 = (CheckBox)findViewById(R.id.checkboxLED1);
+       //mLED1 = (CheckBox)findViewById(R.id.checkboxLED1);
 
         mBTArrayAdapter = new ArrayAdapter<String>(this,android.R.layout.simple_list_item_1);
         mBTAdapter = BluetoothAdapter.getDefaultAdapter(); // get a handle on the bluetooth radio
@@ -95,7 +143,7 @@ public class MainActivity extends AppCompatActivity {
                     } catch (UnsupportedEncodingException e) {
                         e.printStackTrace();
                     }
-                    mReadBuffer.setText(readMessage);
+                    mReadBuffer.setText(readMessage); //Set The Read value
                 }
 
                 if(msg.what == CONNECTING_STATUS){
@@ -114,13 +162,22 @@ public class MainActivity extends AppCompatActivity {
         }
         else {
 
-            mLED1.setOnClickListener(new View.OnClickListener(){
+            ButtonCalor.setOnClickListener(new View.OnClickListener(){
                 @Override
                 public void onClick(View v){
                     if(mConnectedThread != null) //First check to make sure thread created
                         mConnectedThread.write("1");
                 }
             });
+
+            ButtonFrio.setOnClickListener(new View.OnClickListener(){
+                @Override
+                public void onClick(View v){
+                    if(mConnectedThread != null) //First check to make sure thread created
+                        mConnectedThread.write("0");
+                }
+            });
+
 
 
             mScanBtn.setOnClickListener(new View.OnClickListener() {
@@ -151,6 +208,9 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
         }
+
+
+        new Timer().execute(); //Activates Timer
     }
 
     private void bluetoothOn(View view){
@@ -361,14 +421,43 @@ public class MainActivity extends AppCompatActivity {
 
 
 
+    private class Timer extends AsyncTask<Void, Integer, Long> {
 
+        @Override
+        protected Long doInBackground(Void... values) {
+            //int count = 0;
+            Integer[] temps = {26, 26, 27, 30, 27, 26, 23, 21, 19, 24};
+            long totalSize = 0;
 
+            for (int i = 0; i < 10; i++) {
+                try {
+                    Thread.sleep(5000); //Segundos
+                } catch (InterruptedException e) {
 
+                }
+                publishProgress(temps[i]);
+            }
+            return totalSize;
+        }
 
+        @Override
+        protected void onProgressUpdate(Integer... newTemp) {
+            Integer tempValue = newTemp[0];
+            textSenseTemp.setText(tempValue.toString());
+            if (tempValue >= 28) {
+                actuadorCalor.setVisibility(View.VISIBLE);
+            } else if (tempValue <= 20) {
+                actuadorFrio.setVisibility(View.VISIBLE);
+            } else {
+                actuadorFrio.setVisibility(View.GONE);
+                actuadorCalor.setVisibility(View.GONE);
+            }
+        }
 
-
-
-
-
+        @Override
+        protected void onPostExecute(Long result){
+            //showDialog("Downloaded " + result + " bytes");
+        }
+    }
 
 }
